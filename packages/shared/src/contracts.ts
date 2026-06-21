@@ -15,6 +15,21 @@ export interface SourceCitation {
   excerpt: string;
 }
 
+export const supportedDocumentTypes = [
+  'pdf',
+  'docx',
+  'markdown',
+  'plain-text',
+  'html',
+  'json',
+  'csv',
+  'tsv',
+  'rtf',
+  'log',
+] as const;
+
+export type SupportedDocumentType = (typeof supportedDocumentTypes)[number];
+
 export interface DocumentRecord {
   id: string;
   fileName: string;
@@ -22,6 +37,11 @@ export interface DocumentRecord {
   sizeBytes: number;
   status: DocumentStatus;
   createdAt: string;
+  documentType?: SupportedDocumentType;
+  pageCount?: number;
+  chunkCount?: number;
+  indexedAt?: string;
+  errorMessage?: string;
 }
 
 export interface UploadRequest {
@@ -34,6 +54,13 @@ export interface UploadResponse {
   document: DocumentRecord;
   uploadUrl: string;
   objectKey: string;
+}
+
+export interface IndexedDocumentResponse {
+  document: DocumentRecord;
+  indexedChunks: number;
+  parser: SupportedDocumentType;
+  embeddingProvider: string;
 }
 
 export interface ChatRequest {

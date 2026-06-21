@@ -8,6 +8,7 @@ export interface ParsedPage {
 export interface ParsedDocument {
   documentId: string;
   title?: string;
+  parser?: string;
   pages: ParsedPage[];
 }
 
@@ -54,4 +55,3 @@ export interface GroundedAnswer {
   model: string;
   grounded: boolean;
 }
-

@@ -134,7 +134,7 @@ export const sampleStudyPack: StudyPack = {
   documentId: 'demo-study-pack',
   title: 'Distributed RAG Systems - exam prep pack',
   summary:
-    'This study pack condenses a deployment-ready PDF chat system into the core ideas students need for viva, interviews, and exams: ingestion, chunking, embeddings, retrieval, grounding, and deployment.',
+    'This study pack condenses a deployment-ready document chat system into the core ideas students need for viva, interviews, and exams: ingestion, chunking, embeddings, retrieval, grounding, and deployment.',
   flashcards: [
     {
       question: 'Why is pgvector better than an in-memory vector store for production?',
@@ -149,7 +149,7 @@ export const sampleStudyPack: StudyPack = {
       difficulty: 'medium',
     },
     {
-      question: 'What is the purpose of citations in a PDF chat product?',
+      question: 'What is the purpose of citations in a document chat product?',
       answer:
         'They let users verify claims against the source text and reduce trust issues around hallucinations.',
       difficulty: 'easy',
@@ -164,7 +164,7 @@ export const sampleStudyPack: StudyPack = {
         'The architecture is container-first, so ECS/Fargate is the cleanest fit for the API and worker.',
     },
     {
-      prompt: 'What happens after the user uploads a PDF?',
+      prompt: 'What happens after the user uploads a document?',
       options: [
         'It is sent directly to the LLM',
         'The worker parses, chunks, embeds, and indexes it',
@@ -198,7 +198,7 @@ export const sampleStudyPack: StudyPack = {
       title: 'Ingestion and chunking',
       durationMinutes: 20,
       objective:
-        'Understand how PDFs become searchable chunks with metadata like page number and source.',
+        'Understand how documents become searchable chunks with metadata like page number and source.',
     },
     {
       title: 'Retrieval and citations',

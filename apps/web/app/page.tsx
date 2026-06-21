@@ -17,8 +17,8 @@ export default function HomePage() {
             <Pill>AI Engineering Course Project</Pill>
             <h1>Chat With Any Document</h1>
             <p className="lede">
-              A deployable study engine for PDFs, papers, notes, and textbooks,
-              designed as a full-stack monorepo instead of a browser-only demo.
+              A deployable study engine for PDFs, DOCX files, Markdown, notes,
+              datasets, logs, and textbooks, designed as a full-stack monorepo.
             </p>
             <p className="supporting-copy">
               Inspired by ChatPDF, Humata, NotebookLM-style study workflows, and
@@ -35,7 +35,7 @@ export default function HomePage() {
             </div>
             <div className="hero-callout">
               <span>Monorepo upgrade</span>
-              <strong>Study packs, multi-cloud deployment story, API plus worker architecture</strong>
+              <strong>Multi-format ingestion, study packs, multi-cloud deployment, API plus worker architecture</strong>
             </div>
             <div className="hero-callout hero-callout-accent">
               <span>Optional local mode</span>

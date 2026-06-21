@@ -18,8 +18,8 @@ export const FeatureGrid = () => {
         <h2>Keep the best parts of the browser-native reference</h2>
         <p>
           The reference repo proved that useful PDF chat can happen directly in
-          the browser. This monorepo preserves that option while making server-side
-          ingestion the default path for persistence and deployment.
+          the browser. This monorepo preserves that option while making multi-format
+          server-side ingestion the default path for persistence and deployment.
         </p>
       </div>
       <div className="feature-grid">
@@ -43,7 +43,7 @@ export const FeatureGrid = () => {
         <ul className="bullet-list">
           <li>Stateless web, API, and worker services</li>
           <li>PostgreSQL with pgvector for durable retrieval</li>
-          <li>S3-compatible object storage for PDFs</li>
+          <li>S3-compatible object storage for PDFs, DOCX, Markdown, TXT, HTML, JSON, CSV, TSV, RTF, and logs</li>
           <li>Provider-agnostic model routing with Ollama by default</li>
           <li>Cloud-portable containers for AWS, GCP, Azure, Render, and Railway</li>
         </ul>

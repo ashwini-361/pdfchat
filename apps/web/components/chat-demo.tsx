@@ -17,7 +17,7 @@ export const ChatDemo = () => {
     <Card title="Product demo surface">
       <div className="stack">
         <label className="label" htmlFor="question">
-          Ask a question about an indexed PDF
+          Ask a question about an indexed document
         </label>
         <textarea
           id="question"

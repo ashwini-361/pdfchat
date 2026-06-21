@@ -12,7 +12,13 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@doc-chat/shared": "workspace:*"
+    "@doc-chat/shared": "workspace:*",
+    "html-to-text": "^9.0.5",
+    "mammoth": "^1.11.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/html-to-text": "^9.0.4",
+    "@types/pdf-parse": "^1.1.5"
   }
 }
-

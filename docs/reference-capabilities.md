@@ -10,9 +10,8 @@ The reference project demonstrated a strong browser-native stack:
 
 This monorepo keeps those ideas through `packages/browser-runtime`, while also adding:
 
-- server-side ingestion and retrieval
+- server-side ingestion and retrieval for PDF, DOCX, Markdown, TXT, HTML, JSON, CSV, TSV, RTF, and log-like text
 - durable vector storage with `pgvector`
 - deployable API and worker services
 - object storage for documents
 - provider-agnostic model routing
-

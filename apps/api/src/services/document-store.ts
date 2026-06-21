@@ -1,6 +1,8 @@
 import {
   chunkDocument,
+  detectDocumentType,
   InMemoryVectorStore,
+  loadDocument,
   MockChatProvider,
   MockEmbeddingProvider,
   runGroundedChat,
@@ -8,6 +10,7 @@ import {
 import type {
   ChatResponse,
   DocumentRecord,
+  IndexedDocumentResponse,
   UploadRequest,
   UploadResponse,
 } from '@doc-chat/shared';
@@ -41,6 +44,8 @@ export const createDocument = async (
   input: UploadRequest,
 ): Promise<UploadResponse> => {
   const id = uuidv4();
+  const documentType =
+    detectDocumentType(input.fileName, input.contentType) ?? undefined;
   const document: DocumentRecord = {
     id,
     fileName: input.fileName,
@@ -48,6 +53,7 @@ export const createDocument = async (
     sizeBytes: input.sizeBytes,
     status: 'uploaded',
     createdAt: now(),
+    documentType,
   };
 
   documents.set(id, document);
@@ -61,6 +67,63 @@ export const createDocument = async (
 
 export const listDocuments = async (): Promise<DocumentRecord[]> =>
   Array.from(documents.values());
+
+export const indexUploadedDocument = async (input: {
+  fileName: string;
+  contentType: string;
+  buffer: Buffer;
+}): Promise<IndexedDocumentResponse> => {
+  const id = uuidv4();
+  const document: DocumentRecord = {
+    id,
+    fileName: input.fileName,
+    contentType: input.contentType,
+    sizeBytes: input.buffer.byteLength,
+    status: 'indexing',
+    createdAt: now(),
+  };
+
+  documents.set(id, document);
+
+  try {
+    const parsed = await loadDocument({
+      documentId: id,
+      fileName: input.fileName,
+      contentType: input.contentType,
+      buffer: input.buffer,
+    });
+    const chunks = chunkDocument(parsed);
+    const vectors = await embeddings.embedTexts(chunks.map((chunk) => chunk.text));
+    await vectorStore.upsert(chunks, vectors);
+
+    const indexedDocument: DocumentRecord = {
+      ...document,
+      status: 'ready',
+      documentType: parsed.parser,
+      pageCount: parsed.pages.length,
+      chunkCount: chunks.length,
+      indexedAt: now(),
+    };
+
+    documents.set(id, indexedDocument);
+
+    return {
+      document: indexedDocument,
+      indexedChunks: chunks.length,
+      parser: parsed.parser,
+      embeddingProvider: embeddings.id,
+    };
+  } catch (error) {
+    const failedDocument: DocumentRecord = {
+      ...document,
+      status: 'failed',
+      errorMessage: error instanceof Error ? error.message : 'Indexing failed',
+    };
+
+    documents.set(id, failedDocument);
+    throw error;
+  }
+};
 
 export const indexDemoDocument = async (documentId: string) => {
   const existing = documents.get(documentId);
@@ -79,6 +142,10 @@ export const indexDemoDocument = async (documentId: string) => {
   await vectorStore.upsert(chunks, vectors);
 
   existing.status = 'ready';
+  existing.documentType = 'plain-text';
+  existing.pageCount = demoPages.length;
+  existing.chunkCount = chunks.length;
+  existing.indexedAt = now();
   documents.set(documentId, existing);
 
   return {

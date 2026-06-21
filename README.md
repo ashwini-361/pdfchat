@@ -1,6 +1,6 @@
 # Chat With Any Document
 
-Senior-level monorepo for a deployable RAG product that lets users chat with PDFs like research papers, legal contracts, notes, and textbooks.
+Senior-level monorepo for a deployable RAG product that lets users chat with PDFs, DOCX files, Markdown, TXT, HTML, JSON, CSV, TSV, RTF, logs, research papers, legal contracts, notes, and textbooks.
 
 Repository name: `chat-with-any-document`
 
@@ -9,8 +9,8 @@ The repo takes architectural inspiration from [ashwini-961/ask-my-pdf](https://g
 ## What this repo includes
 
 - `apps/web`: Next.js product surface for upload, chat, citations, and browser-AI feature toggles
-- `apps/api`: Fastify API for health, documents, indexing entry points, and grounded chat
-- `apps/worker`: ingestion worker for parse -> chunk -> embed -> index flows
+- `apps/api`: Fastify API for health, multi-format document upload, indexing entry points, and grounded chat
+- `apps/worker`: ingestion worker for parse -> chunk -> embed -> index flows across common text document formats
 - `packages/shared`: shared contracts and runtime config helpers
 - `packages/rag-core`: RAG pipeline primitives, prompt builders, chunking, and provider interfaces
 - `packages/browser-runtime`: browser-side capability layer inspired by the reference app
@@ -74,6 +74,7 @@ The main upgrade is that those capabilities now sit beside a production-friendly
 
 This repo now adds a practical study layer on top of document chat:
 
+- upload-and-index support for PDF, DOCX, Markdown, TXT, HTML, JSON, CSV, TSV, RTF, and logs
 - flashcard generation
 - quiz generation
 - glossary extraction
@@ -107,10 +108,12 @@ This repo is scaffolded as a serious starter rather than a finished product:
 - the web app presents the product shell and capability story
 - the API exposes health, document creation, demo indexing, and grounded chat endpoints
 - the API also exposes benchmark, deployment, student-feature, and study-pack endpoints
+- the API accepts real multipart uploads at `POST /v1/documents/upload`
+- supported upload formats are discoverable at `GET /v1/documents/supported-formats`
 - the worker demonstrates ingestion reporting
 - shared packages already model contracts, chunking, prompts, vector search abstractions, and browser-runtime capabilities
 
-The API currently includes a mock in-memory RAG path so the repo has a coherent execution flow before the real storage and model integrations are added.
+The API currently uses a mock in-memory vector store and mock model provider so the repo has a coherent execution flow before the durable `pgvector` and Ollama adapters are added.
 
 ## Suggested next implementation steps
 

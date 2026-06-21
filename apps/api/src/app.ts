@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 
 import { registerChatRoutes } from './routes/chat';
 import { registerDocumentRoutes } from './routes/documents';
@@ -14,6 +15,12 @@ export const buildApp = async () => {
 
   await app.register(cors, {
     origin: true,
+  });
+  await app.register(multipart, {
+    limits: {
+      fileSize: 25 * 1024 * 1024,
+      files: 1,
+    },
   });
 
   await registerHealthRoutes(app);

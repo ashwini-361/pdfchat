@@ -5,8 +5,8 @@ This monorepo separates product concerns into deployable applications and reusab
 ## Apps
 
 - `apps/web`: user-facing experience for upload, chat, citations, and optional browser-side AI features
-- `apps/api`: stateless HTTP API for document lifecycle, retrieval, chat, and provider orchestration
-- `apps/worker`: background ingestion service for parse -> chunk -> embed -> index
+- `apps/api`: stateless HTTP API for document lifecycle, upload, retrieval, chat, and provider orchestration
+- `apps/worker`: background ingestion service for parse -> chunk -> embed -> index across supported text document formats
 
 ## Packages
 
@@ -21,4 +21,3 @@ This monorepo separates product concerns into deployable applications and reusab
 - persist vectors in PostgreSQL with `pgvector`
 - run chat generation via Ollama or any OpenAI-compatible provider
 - keep the web, API, and worker independently deployable
-
