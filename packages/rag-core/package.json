@@ -1,0 +1,18 @@
+{
+  "name": "@doc-chat/rag-core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "tsc --noEmit --watch",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@doc-chat/shared": "workspace:*"
+  }
+}
+

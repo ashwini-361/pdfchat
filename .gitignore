@@ -1,0 +1,13 @@
+.agents/
+node_modules
+.turbo
+.next
+dist
+coverage
+.env
+.env.local
+.env.*.local
+*.log
+apps/api/.cache
+apps/worker/.cache
+storage
