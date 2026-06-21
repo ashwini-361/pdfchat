@@ -6,7 +6,9 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "allowJs": true,
+    "incremental": true
   },
   "include": [
     "app/**/*.ts",
@@ -14,11 +16,10 @@
     "components/**/*.ts",
     "components/**/*.tsx",
     "lib/**/*.ts",
-    ".next/types/**/*.ts",
-    "next-env.d.ts"
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
   ]
 }
-

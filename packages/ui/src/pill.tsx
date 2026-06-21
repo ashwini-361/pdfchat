@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react';
+
 export const Pill = ({
   children,
   tone = 'default',
 }: {
-  children: string;
+  children: ReactNode;
   tone?: 'default' | 'success' | 'warning';
 }) => {
   const background =
@@ -30,4 +32,3 @@ export const Pill = ({
     </span>
   );
 };
-

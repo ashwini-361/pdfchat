@@ -1,5 +1,16 @@
-import { chunkDocument, InMemoryVectorStore, MockEmbeddingProvider, MockChatProvider, runGroundedChat } from '@doc-chat/rag-core';
-import type { ChatResponse, DocumentRecord, UploadRequest, UploadResponse } from '@doc-chat/shared';
+import {
+  chunkDocument,
+  InMemoryVectorStore,
+  MockChatProvider,
+  MockEmbeddingProvider,
+  runGroundedChat,
+} from '@doc-chat/rag-core';
+import type {
+  ChatResponse,
+  DocumentRecord,
+  UploadRequest,
+  UploadResponse,
+} from '@doc-chat/shared';
 import { getServiceRuntimeConfig } from '@doc-chat/shared';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -91,3 +102,5 @@ export const chatWithDocument = async (input: {
     chatProvider,
   });
 
+export const getDocument = async (documentId: string) =>
+  documents.get(documentId) ?? null;

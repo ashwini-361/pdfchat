@@ -18,9 +18,11 @@ export const UploadSurface = () => (
       </p>
       <div className="upload-placeholder">
         <span>Drop PDF here</span>
-        <small>or connect this panel to `/v1/documents` in the API app</small>
+        <small>
+          or connect this panel to `/v1/documents`, `/v1/study-pack`, and
+          multi-file compare flows in the API app
+        </small>
       </div>
     </div>
   </Card>
 );
-

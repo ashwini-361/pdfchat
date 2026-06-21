@@ -70,6 +70,16 @@ The original reference project is strong at browser-native AI. This repo keeps t
 
 The main upgrade is that those capabilities now sit beside a production-friendly service architecture instead of replacing it.
 
+## Student-first upgrades
+
+This repo now adds a practical study layer on top of document chat:
+
+- flashcard generation
+- quiz generation
+- glossary extraction
+- timed reading plans
+- multi-source compare-ready architecture
+
 ## Why this structure feels industry-grade
 
 - clean separation between product app, API boundary, worker, and shared domain logic
@@ -96,6 +106,7 @@ This repo is scaffolded as a serious starter rather than a finished product:
 
 - the web app presents the product shell and capability story
 - the API exposes health, document creation, demo indexing, and grounded chat endpoints
+- the API also exposes benchmark, deployment, student-feature, and study-pack endpoints
 - the worker demonstrates ingestion reporting
 - shared packages already model contracts, chunking, prompts, vector search abstractions, and browser-runtime capabilities
 
@@ -121,3 +132,5 @@ The API currently includes a mock in-memory RAG path so the repo has a coherent 
 - [Architecture](./docs/architecture.md)
 - [Deployment](./docs/deployment.md)
 - [Reference capability mapping](./docs/reference-capabilities.md)
+- [Product benchmark](./docs/product-benchmark.md)
+- [Source list](./docs/sources.md)

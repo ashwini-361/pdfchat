@@ -61,3 +61,57 @@ export interface BrowserCapability {
   note: string;
 }
 
+export interface StudyFlashcard {
+  question: string;
+  answer: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface StudyQuizQuestion {
+  prompt: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+}
+
+export interface StudyGlossaryItem {
+  term: string;
+  definition: string;
+}
+
+export interface StudyPlanStep {
+  title: string;
+  durationMinutes: number;
+  objective: string;
+}
+
+export interface StudyPack {
+  documentId: string;
+  title: string;
+  summary: string;
+  flashcards: StudyFlashcard[];
+  quiz: StudyQuizQuestion[];
+  glossary: StudyGlossaryItem[];
+  readingPlan: StudyPlanStep[];
+}
+
+export interface FeatureBenchmark {
+  feature: string;
+  referenceRepo: string;
+  currentMonorepo: string;
+  whyItMatters: string;
+}
+
+export interface StudentFeatureModule {
+  name: string;
+  status: 'implemented' | 'starter' | 'planned';
+  value: string;
+}
+
+export interface DeploymentTarget {
+  name: string;
+  frontend: string;
+  services: string;
+  storage: string;
+  whyChooseIt: string;
+}

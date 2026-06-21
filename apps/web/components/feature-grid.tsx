@@ -12,7 +12,17 @@ export const FeatureGrid = () => {
   const capabilities = referenceInspiredCapabilities(capabilityFlags);
 
   return (
-    <div className="feature-grid">
+    <section className="section-shell">
+      <div className="section-head">
+        <span className="eyebrow">Local-first capabilities</span>
+        <h2>Keep the best parts of the browser-native reference</h2>
+        <p>
+          The reference repo proved that useful PDF chat can happen directly in
+          the browser. This monorepo preserves that option while making server-side
+          ingestion the default path for persistence and deployment.
+        </p>
+      </div>
+      <div className="feature-grid">
       <Card title="Reference-inspired capabilities">
         <div className="stack">
           {capabilities.map((capability) => (
@@ -38,7 +48,7 @@ export const FeatureGrid = () => {
           <li>Cloud-portable containers for AWS, GCP, Azure, Render, and Railway</li>
         </ul>
       </Card>
-    </div>
+      </div>
+    </section>
   );
 };
-

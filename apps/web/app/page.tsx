@@ -1,35 +1,61 @@
 import { describeWebLlmStrategy } from '@doc-chat/browser-runtime';
 import { Pill } from '@doc-chat/ui';
 
+import { BenchmarkTable } from '../components/benchmark-table';
 import { ChatDemo } from '../components/chat-demo';
+import { DeploymentMatrix } from '../components/deployment-matrix';
 import { FeatureGrid } from '../components/feature-grid';
+import { StudyLab } from '../components/study-lab';
 import { UploadSurface } from '../components/upload-surface';
 
 export default function HomePage() {
   return (
     <main className="page-shell">
-      <section className="hero">
-        <div className="hero-copy">
-          <Pill>AI Engineering Course Project</Pill>
-          <h1>Chat With Any Document</h1>
-          <p className="lede">
-            A senior-level industry monorepo for a deployable PDF RAG platform
-            inspired by ChatPDF, Humata, and browser-native local-AI experiences.
-          </p>
-          <p className="supporting-copy">
-            The product keeps the reference repo&apos;s local-first ideas while
-            upgrading the architecture for durable storage, worker-based
-            ingestion, cloud deployment, and clean service boundaries.
-          </p>
-        </div>
-        <div className="hero-panel">
-          <div className="metric-card">
-            <span>Primary mode</span>
-            <strong>Server RAG with cloud portability</strong>
+      <section className="hero-poster">
+        <div className="hero-layer">
+          <div className="hero-copy">
+            <Pill>AI Engineering Course Project</Pill>
+            <h1>Chat With Any Document</h1>
+            <p className="lede">
+              A deployable study engine for PDFs, papers, notes, and textbooks,
+              designed as a full-stack monorepo instead of a browser-only demo.
+            </p>
+            <p className="supporting-copy">
+              Inspired by ChatPDF, Humata, NotebookLM-style study workflows, and
+              the browser-native `ask-my-pdf` reference, but rebuilt for durable
+              storage, API-first extensibility, worker ingestion, and recruiter-level
+              deployment clarity.
+            </p>
           </div>
-          <div className="metric-card">
-            <span>Optional mode</span>
-            <strong>{describeWebLlmStrategy()}</strong>
+
+          <div className="hero-board">
+            <div className="hero-callout">
+              <span>Reference strength</span>
+              <strong>Local PDF parsing, local embeddings, WebLLM-style experimentation</strong>
+            </div>
+            <div className="hero-callout">
+              <span>Monorepo upgrade</span>
+              <strong>Study packs, multi-cloud deployment story, API plus worker architecture</strong>
+            </div>
+            <div className="hero-callout hero-callout-accent">
+              <span>Optional local mode</span>
+              <strong>{describeWebLlmStrategy()}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="hero-ribbon">
+          <div>
+            <span>Best for</span>
+            <strong>college students, viva demos, recruiter walkthroughs</strong>
+          </div>
+          <div>
+            <span>Core stack</span>
+            <strong>Next.js + Fastify + Worker + pgvector + Ollama</strong>
+          </div>
+          <div>
+            <span>New layer</span>
+            <strong>flashcards, quizzes, glossary, reading plans</strong>
           </div>
         </div>
       </section>
@@ -39,8 +65,10 @@ export default function HomePage() {
         <ChatDemo />
       </section>
 
+      <StudyLab />
+      <BenchmarkTable />
       <FeatureGrid />
+      <DeploymentMatrix />
     </main>
   );
 }
-

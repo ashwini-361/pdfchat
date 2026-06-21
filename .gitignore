@@ -4,10 +4,12 @@ node_modules
 .next
 dist
 coverage
+*.tsbuildinfo
 .env
 .env.local
 .env.*.local
 *.log
+storage-api-smoke.err
 apps/api/.cache
 apps/worker/.cache
 storage

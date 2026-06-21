@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Card } from '@doc-chat/ui';
 
 const initialAnswer =
-  'Grounded answers appear here after the API retrieves chunks and cites the source pages.';
+  'Grounded answers appear here after the API retrieves chunks, cites source pages, and optionally spins out a study pack for revision.';
 
 export const ChatDemo = () => {
   const [question, setQuestion] = useState(
@@ -30,7 +30,7 @@ export const ChatDemo = () => {
           type="button"
           onClick={() =>
             setAnswer(
-              `The stack separates the web app, API, and ingestion worker so each can deploy independently. Question captured: "${question}".`,
+              `The stack separates the web app, API, and ingestion worker so each can deploy independently, then layers study outputs such as flashcards and quizzes on top of grounded retrieval. Question captured: "${question}".`,
             )
           }
         >
@@ -48,4 +48,3 @@ export const ChatDemo = () => {
     </Card>
   );
 };
-
