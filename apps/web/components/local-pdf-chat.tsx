@@ -3,12 +3,32 @@
 import { useMemo, useRef, useState } from 'react';
 
 type ProcessingState = 'idle' | 'reading' | 'ready' | 'answering' | 'error';
+type LearningTab = 'chat' | 'summary' | 'flashcards' | 'notes' | 'words' | 'quiz';
+type ProviderId =
+  | 'browser'
+  | 'openai'
+  | 'openrouter'
+  | 'nvidia'
+  | 'ollama'
+  | 'vllm'
+  | 'llamacpp'
+  | 'lemonade'
+  | 'custom';
+
+type PdfPage = {
+  page: number;
+  text: string;
+};
 
 type PdfChunk = {
   id: string;
   page: number;
   text: string;
   terms: Map<string, number>;
+};
+
+type RetrievedChunk = PdfChunk & {
+  score: number;
 };
 
 type ChatMessage = {
@@ -18,17 +38,31 @@ type ChatMessage = {
   sources?: RetrievedChunk[];
 };
 
-type RetrievedChunk = PdfChunk & {
-  score: number;
+type TocItem = {
+  id: string;
+  title: string;
+  page: number;
+};
+
+type ProviderPreset = {
+  id: ProviderId;
+  label: string;
+  baseUrl: string;
+  model: string;
+  needsKey: boolean;
+  note: string;
 };
 
 type ChromeLanguageModel = {
   availability: () => Promise<'unavailable' | 'downloadable' | 'downloading' | 'available'>;
-  create: (options?: {
-    monitor?: (monitor: EventTarget) => void;
-  }) => Promise<{
+  create: () => Promise<{
     prompt: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) => Promise<string>;
   }>;
+};
+
+type PromptMessage = {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
 };
 
 declare global {
@@ -37,36 +71,113 @@ declare global {
   }
 }
 
+const providerPresets: ProviderPreset[] = [
+  {
+    id: 'browser',
+    label: 'Browser local',
+    baseUrl: '',
+    model: 'Prompt API or local retrieval',
+    needsKey: false,
+    note: 'Uses Chrome built-in Prompt API when available, then local grounded retrieval.',
+  },
+  {
+    id: 'ollama',
+    label: 'Ollama',
+    baseUrl: 'http://localhost:11434/v1',
+    model: 'gemma3:4b',
+    needsKey: false,
+    note: 'Run Ollama locally and expose its OpenAI-compatible endpoint.',
+  },
+  {
+    id: 'vllm',
+    label: 'vLLM',
+    baseUrl: 'http://localhost:8000/v1',
+    model: 'meta-llama/Llama-3.1-8B-Instruct',
+    needsKey: false,
+    note: 'Works with local or server vLLM OpenAI-compatible serving.',
+  },
+  {
+    id: 'llamacpp',
+    label: 'llama.cpp',
+    baseUrl: 'http://localhost:8080/v1',
+    model: 'local-model',
+    needsKey: false,
+    note: 'Use llama-server with OpenAI-compatible chat completions.',
+  },
+  {
+    id: 'lemonade',
+    label: 'Lemonade',
+    baseUrl: 'http://localhost:8000/v1',
+    model: 'llama',
+    needsKey: false,
+    note: 'Point this to your Lemonade OpenAI-compatible local server.',
+  },
+  {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'google/gemma-3-4b-it',
+    needsKey: true,
+    note: 'Bring your OpenRouter key for hosted open models.',
+  },
+  {
+    id: 'nvidia',
+    label: 'NVIDIA',
+    baseUrl: 'https://integrate.api.nvidia.com/v1',
+    model: 'nvidia/llama-3.1-nemotron-nano-8b-v1',
+    needsKey: true,
+    note: 'Uses NVIDIA NIM OpenAI-compatible chat completions.',
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4.1-mini',
+    needsKey: true,
+    note: 'Bring your OpenAI API key for stronger hosted answers.',
+  },
+  {
+    id: 'custom',
+    label: 'Custom API',
+    baseUrl: 'http://localhost:1234/v1',
+    model: 'local-model',
+    needsKey: false,
+    note: 'Any OpenAI-compatible endpoint, including local gateways.',
+  },
+];
+
 const stopWords = new Set([
-  'a',
-  'an',
+  'about',
+  'after',
+  'also',
   'and',
   'are',
-  'as',
-  'at',
-  'be',
-  'by',
-  'for',
+  'because',
+  'between',
   'from',
-  'has',
-  'in',
-  'is',
-  'it',
-  'of',
-  'on',
-  'or',
+  'have',
+  'into',
   'that',
-  'the',
+  'their',
+  'there',
+  'these',
   'this',
-  'to',
-  'was',
+  'through',
+  'using',
+  'were',
+  'what',
+  'when',
+  'where',
+  'which',
   'with',
+  'would',
 ]);
 
 const sampleQuestions = [
-  'What is this PDF mainly about?',
-  'Summarize the key points in simple language.',
-  'Which facts should I remember for an exam?',
+  'Explain this like I am in class 8.',
+  'What are the 5 most important exam points?',
+  'Make a funny quiz from this PDF.',
+  'What difficult words should I learn?',
 ];
 
 const tokenize = (value: string) =>
@@ -84,28 +195,25 @@ const termMap = (text: string) => {
   return counts;
 };
 
-const splitIntoChunks = (pages: Array<{ page: number; text: string }>) => {
+const sentenceList = (text: string) =>
+  text
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+
+const splitIntoChunks = (pages: PdfPage[]) => {
   const chunks: PdfChunk[] = [];
 
   for (const page of pages) {
-    const sentences = page.text
-      .replace(/\s+/g, ' ')
-      .split(/(?<=[.!?])\s+/)
-      .filter(Boolean);
-
     let buffer: string[] = [];
     let wordCount = 0;
 
-    for (const sentence of sentences) {
+    for (const sentence of sentenceList(page.text)) {
       const sentenceWords = sentence.split(/\s+/).length;
       if (wordCount + sentenceWords > 150 && buffer.length > 0) {
         const text = buffer.join(' ').trim();
-        chunks.push({
-          id: `p${page.page}-c${chunks.length + 1}`,
-          page: page.page,
-          text,
-          terms: termMap(text),
-        });
+        chunks.push({ id: `p${page.page}-c${chunks.length + 1}`, page: page.page, text, terms: termMap(text) });
         buffer = [];
         wordCount = 0;
       }
@@ -116,24 +224,17 @@ const splitIntoChunks = (pages: Array<{ page: number; text: string }>) => {
 
     if (buffer.length > 0) {
       const text = buffer.join(' ').trim();
-      chunks.push({
-        id: `p${page.page}-c${chunks.length + 1}`,
-        page: page.page,
-        text,
-        terms: termMap(text),
-      });
+      chunks.push({ id: `p${page.page}-c${chunks.length + 1}`, page: page.page, text, terms: termMap(text) });
     }
   }
 
   return chunks;
 };
 
-const retrieveChunks = (question: string, chunks: PdfChunk[]) => {
-  const queryTerms = tokenize(question);
-  const uniqueTerms = new Set(queryTerms);
+const retrieveChunks = (question: string, chunks: PdfChunk[], limit = 5) => {
+  const uniqueTerms = new Set(tokenize(question));
 
-  // A compact in-memory scorer is enough for the demo: exact term overlap gets
-  // a small frequency boost, then the top chunks become the answer context.
+  // The in-memory index keeps the free demo useful without embeddings or a backend.
   return chunks
     .map((chunk) => {
       let score = 0;
@@ -148,40 +249,66 @@ const retrieveChunks = (question: string, chunks: PdfChunk[]) => {
     })
     .filter((chunk) => chunk.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 4);
+    .slice(0, limit);
+};
+
+const bestSentences = (text: string, query = '', limit = 5) => {
+  const queryTerms = new Set(tokenize(query));
+  return sentenceList(text)
+    .filter((sentence) => sentence.length > 35)
+    .map((sentence) => ({
+      sentence,
+      score:
+        tokenize(sentence).reduce((total, term) => total + (queryTerms.has(term) ? 2 : 0), 0) +
+        Math.min(sentence.length / 180, 2),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((item) => item.sentence);
+};
+
+const generateToc = (pages: PdfPage[]) => {
+  const toc: TocItem[] = [];
+  for (const page of pages) {
+    const candidates = page.text
+      .split(/\n|(?<=\.)\s+/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 8 && line.length < 90);
+    const title =
+      candidates.find((line) => /^[A-Z0-9][A-Za-z0-9\s:,-]+$/.test(line)) ??
+      sentenceList(page.text)[0] ??
+      `Page ${page.page}`;
+    toc.push({ id: `toc-${page.page}`, page: page.page, title: title.slice(0, 80) });
+  }
+  return toc.slice(0, 18);
 };
 
 const extractiveAnswer = (question: string, sources: RetrievedChunk[]) => {
   if (sources.length === 0) {
-    return 'I could not find enough matching text in the PDF to answer that. Try asking with words that appear in the document.';
+    return 'I could not find enough matching text in the PDF. Try using words that appear in the document.';
   }
 
-  const queryTerms = new Set(tokenize(question));
-  const rankedSentences = sources
-    .flatMap((source) =>
-      source.text
-        .split(/(?<=[.!?])\s+/)
-        .map((sentence) => ({
-          sentence,
-          page: source.page,
-          score: tokenize(sentence).reduce(
-            (total, term) => total + (queryTerms.has(term) ? 1 : 0),
-            0,
-          ),
-        })),
-    )
-    .filter((item) => item.sentence.length > 40)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-
-  const answerBody =
-    rankedSentences.length > 0
-      ? rankedSentences
-          .map((item) => `${item.sentence.trim()} (page ${item.page})`)
-          .join(' ')
-      : `${sources[0].text.slice(0, 520).trim()}... (page ${sources[0].page})`;
+  const answerBody = sources
+    .flatMap((source) => bestSentences(source.text, question, 2).map((sentence) => `${sentence} (page ${source.page})`))
+    .slice(0, 4)
+    .join(' ');
 
   return `Based on the PDF, ${answerBody}`;
+};
+
+const buildPrompt = (question: string, sources: RetrievedChunk[]): PromptMessage[] => {
+  const context = sources.map((source) => `[page ${source.page}] ${source.text}`).join('\n\n');
+  return [
+    {
+      role: 'system',
+      content:
+        'You are a playful tutor for students under class 10. Answer only from the PDF context. Use simple words, short sections, page citations, and a friendly tone. If the context is missing, say you cannot find it in the PDF.',
+    },
+    {
+      role: 'user',
+      content: `PDF context:\n${context}\n\nQuestion: ${question}`,
+    },
+  ];
 };
 
 const askBuiltInPrompt = async (question: string, sources: RetrievedChunk[]) => {
@@ -196,69 +323,131 @@ const askBuiltInPrompt = async (question: string, sources: RetrievedChunk[]) => 
   }
 
   const session = await languageModel.create();
-  const context = sources
-    .map((source) => `[page ${source.page}] ${source.text}`)
-    .join('\n\n');
+  return session.prompt(buildPrompt(question, sources));
+};
 
-  // Chrome's Prompt API keeps generation on-device when Gemini Nano is available.
-  return session.prompt([
-    {
-      role: 'system',
-      content:
-        'Answer only from the supplied PDF context. If the context is not enough, say you cannot find it in the document. Cite page numbers inline.',
-    },
-    {
-      role: 'user',
-      content: `PDF context:\n${context}\n\nQuestion: ${question}`,
-    },
-  ]);
+const askOpenAiCompatible = async (
+  provider: ProviderPreset,
+  apiKey: string,
+  question: string,
+  sources: RetrievedChunk[],
+) => {
+  if (!provider.baseUrl) {
+    return null;
+  }
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (apiKey.trim()) {
+    headers.Authorization = `Bearer ${apiKey.trim()}`;
+  }
+  if (provider.id === 'openrouter') {
+    headers['HTTP-Referer'] = 'http://localhost:3000';
+    headers['X-Title'] = 'Ask my PDF student demo';
+  }
+
+  const response = await fetch(`${provider.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: provider.model,
+      messages: buildPrompt(question, sources),
+      temperature: 0.25,
+      max_tokens: 700,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Model API returned ${response.status}. Check CORS, base URL, model name, or API key.`);
+  }
+
+  const payload = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  return payload.choices?.[0]?.message?.content ?? null;
+};
+
+const makeLearningPack = (pages: PdfPage[], chunks: PdfChunk[]) => {
+  const fullText = pages.map((page) => page.text).join(' ');
+  const important = bestSentences(fullText, 'important main explain remember', 7);
+  const terms = [...chunks.reduce((map, chunk) => {
+    for (const [term, count] of chunk.terms) {
+      map.set(term, (map.get(term) ?? 0) + count);
+    }
+    return map;
+  }, new Map<string, number>())]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([term]) => term);
+
+  return {
+    summary: important.slice(0, 4),
+    notes: important.map((sentence, index) => `Point ${index + 1}: ${sentence}`),
+    flashcards: important.slice(0, 6).map((sentence, index) => ({
+      question: `Card ${index + 1}: What does this idea mean?`,
+      answer: sentence,
+    })),
+    words: terms.map((term) => ({
+      word: term,
+      meaning: `In this PDF, "${term}" is an important word. Search the cited text and explain it in your own words.`,
+    })),
+    quiz: important.slice(0, 6).map((sentence, index) => ({
+      question:
+        index % 2 === 0
+          ? `Tiny teacher question ${index + 1}: Can you explain this in one sentence?`
+          : `Silly but serious question ${index + 1}: If this idea was a school notice, what would it say?`,
+      answer: sentence,
+    })),
+  };
 };
 
 export const LocalPdfChat = () => {
   const [state, setState] = useState<ProcessingState>('idle');
+  const [activeTab, setActiveTab] = useState<LearningTab>('chat');
   const [fileName, setFileName] = useState<string | null>(null);
-  const [pageCount, setPageCount] = useState(0);
+  const [pages, setPages] = useState<PdfPage[]>([]);
   const [chunks, setChunks] = useState<PdfChunk[]>([]);
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [statusMessage, setStatusMessage] = useState('Add a PDF to begin.');
   const [engine, setEngine] = useState('Waiting for PDF');
+  const [providerId, setProviderId] = useState<ProviderId>('browser');
+  const [apiKey, setApiKey] = useState('');
+  const [customBaseUrl, setCustomBaseUrl] = useState(providerPresets.at(-1)?.baseUrl ?? '');
+  const [customModel, setCustomModel] = useState(providerPresets.at(-1)?.model ?? '');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bookmarks, setBookmarks] = useState<TocItem[]>([]);
+  const [selectedPage, setSelectedPage] = useState(1);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const selectedPreset = providerPresets.find((provider) => provider.id === providerId) ?? providerPresets[0];
+  const activeProvider =
+    providerId === 'custom'
+      ? { ...selectedPreset, baseUrl: customBaseUrl, model: customModel }
+      : selectedPreset;
   const canAsk = state === 'ready' && question.trim().length > 0;
-  const topTerms = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const chunk of chunks) {
-      for (const [term, count] of chunk.terms) {
-        counts.set(term, (counts.get(term) ?? 0) + count);
-      }
-    }
-
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([term]) => term);
-  }, [chunks]);
+  const toc = useMemo(() => generateToc(pages), [pages]);
+  const learningPack = useMemo(() => makeLearningPack(pages, chunks), [pages, chunks]);
+  const hasWebGpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
+  const pagePreview = pages.find((page) => page.page === selectedPage)?.text ?? '';
 
   const readPdf = async (file: File) => {
     setState('reading');
     setFileName(file.name);
     setMessages([]);
     setChunks([]);
-    setPageCount(0);
+    setPages([]);
+    setBookmarks([]);
+    setSelectedPage(1);
     setEngine('PDF.js local parser');
     setStatusMessage('Reading PDF text in this browser...');
 
     try {
       // PDF.js touches browser-only APIs, so import it after user interaction.
       const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        'pdfjs-dist/legacy/build/pdf.worker.mjs',
-        import.meta.url,
-      ).toString();
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.mjs', import.meta.url).toString();
       const data = await file.arrayBuffer();
       const pdf = await pdfjs.getDocument({ data }).promise;
-      const pages: Array<{ page: number; text: string }> = [];
+      const nextPages: PdfPage[] = [];
 
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         setStatusMessage(`Extracting page ${pageNumber} of ${pdf.numPages}...`);
@@ -269,24 +458,19 @@ export const LocalPdfChat = () => {
           .join(' ')
           .replace(/\s+/g, ' ')
           .trim();
-
         if (text) {
-          pages.push({ page: pageNumber, text });
+          nextPages.push({ page: pageNumber, text });
         }
       }
 
-      const nextChunks = splitIntoChunks(pages);
-      setPageCount(pdf.numPages);
+      const nextChunks = splitIntoChunks(nextPages);
+      setPages(nextPages);
       setChunks(nextChunks);
       setState('ready');
-      setStatusMessage(
-        `Ready. Indexed ${nextChunks.length} chunks from ${pdf.numPages} pages.`,
-      );
+      setStatusMessage(`Ready. Indexed ${nextChunks.length} chunks from ${pdf.numPages} pages.`);
     } catch (error) {
       setState('error');
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Could not read this PDF.',
-      );
+      setStatusMessage(error instanceof Error ? error.message : 'Could not read this PDF.');
     }
   };
 
@@ -297,169 +481,198 @@ export const LocalPdfChat = () => {
 
     const cleanQuestion = questionText.trim();
     const sources = retrieveChunks(cleanQuestion, chunks);
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: cleanQuestion,
-    };
-
-    setMessages((current) => [...current, userMessage]);
+    setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'user', content: cleanQuestion }]);
     setQuestion('');
     setState('answering');
-    setStatusMessage('Retrieving relevant chunks...');
+    setStatusMessage('Retrieving matching PDF chunks...');
 
     try {
-      setStatusMessage('Trying browser built-in prompt...');
-      const promptAnswer = await askBuiltInPrompt(cleanQuestion, sources);
-      const answer = promptAnswer ?? extractiveAnswer(cleanQuestion, sources);
+      let answer: string | null = null;
+      if (activeProvider.id === 'browser') {
+        setStatusMessage('Trying browser built-in prompt, then local fallback...');
+        answer = await askBuiltInPrompt(cleanQuestion, sources);
+      } else {
+        setStatusMessage(`Asking ${activeProvider.label} with grounded PDF context...`);
+        answer = await askOpenAiCompatible(activeProvider, apiKey, cleanQuestion, sources);
+      }
 
-      setEngine(promptAnswer ? 'Chrome built-in Prompt API' : 'Local extractive answer');
+      setEngine(answer ? activeProvider.label : 'Local extractive answer');
       setMessages((current) => [
         ...current,
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: answer,
+          content: answer ?? extractiveAnswer(cleanQuestion, sources),
           sources,
         },
       ]);
       setStatusMessage('Answer grounded in retrieved PDF chunks.');
-      setState('ready');
-    } catch {
+    } catch (error) {
       setEngine('Local extractive answer');
       setMessages((current) => [
         ...current,
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: extractiveAnswer(cleanQuestion, sources),
+          content: `${extractiveAnswer(cleanQuestion, sources)}\n\nModel note: ${
+            error instanceof Error ? error.message : 'Provider failed, so the free local mode answered.'
+          }`,
           sources,
         },
       ]);
-      setStatusMessage('Built-in prompt was not available, so local retrieval answered.');
+      setStatusMessage('Provider failed, so free local retrieval answered instead.');
+    } finally {
       setState('ready');
     }
   };
 
+  const addBookmark = (item: TocItem) => {
+    setBookmarks((current) => (current.some((bookmark) => bookmark.id === item.id) ? current : [...current, item]));
+  };
+
   return (
-    <section className="pdf-demo-shell" aria-label="Local PDF chat demo">
+    <section className="pdf-demo-shell" aria-label="Local PDF learning demo">
       <nav className="pdf-demo-nav">
-        <button className="brand-button" type="button">
-          Ask my PDF
-        </button>
+        <button className="brand-button" type="button">Ask my PDF</button>
         <div className="nav-links" aria-label="Demo links">
-          <a href="#how-it-works">About</a>
-          <a href="#study-workflow">Study</a>
-          <a href="https://github.com/ashwini-961/ask-my-pdf">GitHub</a>
-          <button className="settings-button" type="button" title="Settings">
-            *
-          </button>
+          <button type="button" onClick={() => setActiveTab('summary')}>Summary</button>
+          <button type="button" onClick={() => setActiveTab('flashcards')}>Flashcards</button>
+          <button type="button" onClick={() => setSettingsOpen((open) => !open)}>Settings</button>
         </div>
       </nav>
 
+      {settingsOpen ? (
+        <section className="settings-dock" aria-label="Model provider settings">
+          <div>
+            <span>Answer provider</span>
+            <select value={providerId} onChange={(event) => setProviderId(event.target.value as ProviderId)}>
+              {providerPresets.map((provider) => (
+                <option key={provider.id} value={provider.id}>{provider.label}</option>
+              ))}
+            </select>
+            <p>{activeProvider.note}</p>
+          </div>
+          <label>
+            Base URL
+            <input
+              value={providerId === 'custom' ? customBaseUrl : activeProvider.baseUrl}
+              disabled={providerId !== 'custom'}
+              onChange={(event) => setCustomBaseUrl(event.target.value)}
+            />
+          </label>
+          <label>
+            Model
+            <input
+              value={providerId === 'custom' ? customModel : activeProvider.model}
+              disabled={providerId !== 'custom'}
+              onChange={(event) => setCustomModel(event.target.value)}
+            />
+          </label>
+          <label>
+            API key
+            <input
+              type="password"
+              value={apiKey}
+              placeholder={activeProvider.needsKey ? 'Required for this provider' : 'Optional for local servers'}
+              onChange={(event) => setApiKey(event.target.value)}
+            />
+          </label>
+          <div className="runtime-pills">
+            <span>{hasWebGpu ? 'WebGPU available' : 'WebGPU not detected'}</span>
+            <span>Free mode always works offline after PDF parsing</span>
+          </div>
+        </section>
+      ) : null}
+
       <div className="pdf-demo-grid">
-        <div
-          className="pdf-drop-panel"
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            const file = event.dataTransfer.files[0];
-            if (file?.type === 'application/pdf') {
-              void readPdf(file);
-            }
-          }}
-        >
-          <input
-            ref={inputRef}
-            className="hidden-input"
-            type="file"
-            accept="application/pdf"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                void readPdf(file);
-              }
-            }}
-          />
-          <button
-            className="read-pdf-button"
-            type="button"
-            onClick={() => inputRef.current?.click()}
-          >
+        <aside className="pdf-drop-panel" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
+          event.preventDefault();
+          const file = event.dataTransfer.files[0];
+          if (file?.type === 'application/pdf') void readPdf(file);
+        }}>
+          <input ref={inputRef} className="hidden-input" type="file" accept="application/pdf" onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void readPdf(file);
+          }} />
+          <button className="read-pdf-button" type="button" onClick={() => inputRef.current?.click()}>
             <span aria-hidden="true">PDF</span>
             Read PDF
           </button>
-
           <div className="reader-note">
-            <p>
-              Works best with selectable text PDFs. Scanned image-only files need
-              OCR before this browser demo can read them.
-            </p>
+            <p>Drop a selectable-text PDF. It is parsed, chunked, searched, and previewed locally in the browser.</p>
           </div>
-
           <div className="pdf-status-board">
             <span>{state.toUpperCase()}</span>
             <strong>{statusMessage}</strong>
             {fileName ? <p>{fileName}</p> : null}
           </div>
-        </div>
+          <div className="toc-panel">
+            <strong>Table of contents</strong>
+            {toc.length === 0 ? <p>Add a PDF to generate a simple page map.</p> : toc.map((item) => (
+              <button key={item.id} type="button" onClick={() => setSelectedPage(item.page)}>
+                <span>p{item.page}</span>
+                {item.title}
+              </button>
+            ))}
+          </div>
+        </aside>
 
-        <div className="pdf-chat-panel">
-          <div className="chat-window" aria-live="polite">
-            {messages.length === 0 ? (
-              <div className="empty-chat">
-                <p>Please add a document for which you have questions.</p>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <article
-                  className={`chat-bubble chat-bubble-${message.role}`}
-                  key={message.id}
-                >
-                  <p>{message.content}</p>
-                  {message.sources ? (
-                    <div className="source-list">
-                      <strong>Sources</strong>
-                      {message.sources.map((source) => (
-                        <span key={source.id}>
-                          Page {source.page}: {source.text.slice(0, 120)}...
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </article>
-              ))
-            )}
+        <section className="pdf-chat-panel">
+          <div className="learning-tabs">
+            {(['chat', 'summary', 'flashcards', 'notes', 'words', 'quiz'] as LearningTab[]).map((tab) => (
+              <button
+                key={tab}
+                className={activeTab === tab ? 'active-tab' : ''}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
-          <form
-            className="question-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void answerQuestion();
-            }}
-          >
-            <textarea
-              value={question}
-              disabled={state !== 'ready'}
-              placeholder={
-                state === 'ready'
-                  ? 'What do you want to know?'
-                  : 'Upload a PDF first'
-              }
-              onChange={(event) => setQuestion(event.target.value)}
-            />
-            <button type="submit" disabled={!canAsk}>
-              {state === 'answering' ? 'Thinking' : "Let's go"}
-            </button>
-          </form>
-        </div>
+          {activeTab === 'chat' ? (
+            <>
+              <div className="chat-window" aria-live="polite">
+                {messages.length === 0 ? (
+                  <div className="empty-chat"><p>Please add a document for which you have questions.</p></div>
+                ) : messages.map((message) => (
+                  <article className={`chat-bubble chat-bubble-${message.role}`} key={message.id}>
+                    <p>{message.content}</p>
+                    {message.sources ? (
+                      <div className="source-list">
+                        <strong>Sources</strong>
+                        {message.sources.map((source) => (
+                          <span key={source.id}>Page {source.page}: {source.text.slice(0, 130)}...</span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+              <form className="question-form" onSubmit={(event) => {
+                event.preventDefault();
+                void answerQuestion();
+              }}>
+                <textarea
+                  value={question}
+                  disabled={state !== 'ready'}
+                  placeholder={state === 'ready' ? 'Ask like: explain this concept with an example' : 'Upload a PDF first'}
+                  onChange={(event) => setQuestion(event.target.value)}
+                />
+                <button type="submit" disabled={!canAsk}>{state === 'answering' ? 'Thinking' : "Let's go"}</button>
+              </form>
+            </>
+          ) : (
+            <LearningPanel tab={activeTab} pack={learningPack} pagePreview={pagePreview} />
+          )}
+        </section>
       </div>
 
-      <div className="pdf-demo-footer" id="how-it-works">
+      <section className="student-workbench">
         <div>
           <span>Pages</span>
-          <strong>{pageCount || '--'}</strong>
+          <strong>{pages.length || '--'}</strong>
         </div>
         <div>
           <span>Chunks</span>
@@ -470,20 +683,35 @@ export const LocalPdfChat = () => {
           <strong>{engine}</strong>
         </div>
         <div>
-          <span>Top terms</span>
-          <strong>{topTerms.length > 0 ? topTerms.join(', ') : '--'}</strong>
+          <span>Selected page</span>
+          <strong>Page {selectedPage}</strong>
         </div>
-      </div>
+      </section>
+
+      <section className="study-strip">
+        <div className="page-preview">
+          <div>
+            <strong>Easy scroll preview</strong>
+            {toc.find((item) => item.page === selectedPage) ? (
+              <button type="button" onClick={() => addBookmark(toc.find((item) => item.page === selectedPage)!)}>Bookmark</button>
+            ) : null}
+          </div>
+          <p>{pagePreview || 'Upload a PDF, then choose a page from the table of contents.'}</p>
+        </div>
+        <div className="bookmark-board">
+          <strong>Important bookmarks</strong>
+          {bookmarks.length === 0 ? <p>No bookmarks yet.</p> : bookmarks.map((bookmark) => (
+            <button key={bookmark.id} type="button" onClick={() => setSelectedPage(bookmark.page)}>
+              Page {bookmark.page}: {bookmark.title}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {chunks.length > 0 ? (
         <div className="sample-question-row">
           {sampleQuestions.map((sample) => (
-            <button
-              key={sample}
-              type="button"
-              onClick={() => void answerQuestion(sample)}
-              disabled={state !== 'ready'}
-            >
+            <button key={sample} type="button" onClick={() => void answerQuestion(sample)} disabled={state !== 'ready'}>
               {sample}
             </button>
           ))}
@@ -492,3 +720,71 @@ export const LocalPdfChat = () => {
     </section>
   );
 };
+
+const LearningPanel = ({
+  tab,
+  pack,
+  pagePreview,
+}: {
+  tab: LearningTab;
+  pack: ReturnType<typeof makeLearningPack>;
+  pagePreview: string;
+}) => {
+  if (tab === 'summary') {
+    return <PanelList title="Simple summary" items={pack.summary} empty="Upload a PDF to create a summary." />;
+  }
+  if (tab === 'notes') {
+    return <PanelList title="Important notes" items={pack.notes} empty="Upload a PDF to create important notes." />;
+  }
+  if (tab === 'flashcards') {
+    return (
+      <div className="learning-panel">
+        <h2>Flashcards</h2>
+        <div className="card-grid">
+          {pack.flashcards.map((card) => (
+            <article key={card.question} className="study-card">
+              <strong>{card.question}</strong>
+              <p>{card.answer}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (tab === 'words') {
+    return (
+      <div className="learning-panel">
+        <h2>Word meanings</h2>
+        <div className="word-grid">
+          {pack.words.map((word) => (
+            <article key={word.word}>
+              <strong>{word.word}</strong>
+              <p>{word.meaning}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (tab === 'quiz') {
+    return (
+      <div className="learning-panel">
+        <h2>Playful questions</h2>
+        {pack.quiz.map((item) => (
+          <details key={item.question}>
+            <summary>{item.question}</summary>
+            <p>{item.answer}</p>
+          </details>
+        ))}
+      </div>
+    );
+  }
+  return <PanelList title="Page preview" items={[pagePreview]} empty="Choose a page to preview." />;
+};
+
+const PanelList = ({ title, items, empty }: { title: string; items: string[]; empty: string }) => (
+  <div className="learning-panel">
+    <h2>{title}</h2>
+    {items.length === 0 ? <p>{empty}</p> : items.map((item) => <p key={item}>{item}</p>)}
+  </div>
+);
