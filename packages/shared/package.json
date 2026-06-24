@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "tsc --noEmit --watch",
     "build": "tsc --noEmit",
+    "test": "vitest run --root ../.. packages/shared",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   }
 }
-

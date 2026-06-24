@@ -101,6 +101,13 @@ This repo now adds a practical study layer on top of document chat:
 - `minio` for S3-compatible object storage
 - `ollama` for local open-source models
 
+Pull the default local models before using the real backend RAG path:
+
+```bash
+ollama pull gemma3:4b
+ollama pull nomic-embed-text
+```
+
 ## Current starter behavior
 
 This repo is scaffolded as a serious starter rather than a finished product:
@@ -110,21 +117,22 @@ This repo is scaffolded as a serious starter rather than a finished product:
 - the API also exposes benchmark, deployment, student-feature, and study-pack endpoints
 - the API accepts real multipart uploads at `POST /v1/documents/upload`
 - supported upload formats are discoverable at `GET /v1/documents/supported-formats`
+- `/health` reports whether model execution is using backend Ollama or the mock provider
+- server-side chat and embeddings use Ollama by default through `CHAT_PROVIDER=ollama` and `EMBEDDING_PROVIDER=ollama`
 - the worker demonstrates ingestion reporting
 - shared packages already model contracts, chunking, prompts, vector search abstractions, and browser-runtime capabilities
 
-The API currently uses a mock in-memory vector store and mock model provider so the repo has a coherent execution flow before the durable `pgvector` and Ollama adapters are added.
+The API still uses an in-memory vector store for starter simplicity, but the model provider is now swappable. Use `CHAT_PROVIDER=mock` and `EMBEDDING_PROVIDER=mock` for offline demos, or keep the default Ollama providers for real local model execution.
 
 ## Suggested next implementation steps
 
-1. Replace the mock vector store with real PostgreSQL `pgvector` persistence.
-2. Add real PDF extraction in the worker.
-3. Add S3 or MinIO upload handling in the API.
+1. Replace the in-memory vector store with real PostgreSQL `pgvector` persistence.
+2. Move long-running document ingestion into the worker queue.
+3. Persist uploads in S3 or MinIO instead of only indexing request buffers.
 4. Connect the web upload UI to `/v1/documents`.
-5. Swap the mock chat and embedding providers with Ollama-backed adapters.
-6. Add authentication and per-user document scoping.
-7. Add tests for chunking, retrieval, and API contracts.
-8. Add CI for lint, typecheck, and integration smoke tests.
+5. Add authentication and per-user document scoping.
+6. Add tests for chunking, retrieval, provider adapters, and API contracts.
+7. Add CI for lint, typecheck, and integration smoke tests.
 
 ## Recruiter explanation
 
