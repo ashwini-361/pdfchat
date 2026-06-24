@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "tsc --noEmit --watch",
     "build": "tsc --noEmit",
+    "test": "vitest run --root ../.. packages/rag-core",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },

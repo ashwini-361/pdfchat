@@ -5,6 +5,8 @@ import {
   loadDocument,
   MockChatProvider,
   MockEmbeddingProvider,
+  OllamaChatProvider,
+  OllamaEmbeddingProvider,
   runGroundedChat,
 } from '@doc-chat/rag-core';
 import type {
@@ -19,9 +21,21 @@ import { v4 as uuidv4 } from 'uuid';
 
 const documents = new Map<string, DocumentRecord>();
 const vectorStore = new InMemoryVectorStore();
-const embeddings = new MockEmbeddingProvider();
-const chatProvider = new MockChatProvider();
 const config = getServiceRuntimeConfig(process.env);
+const ollamaOptions = {
+  baseUrl: config.ollamaBaseUrl,
+  chatModel: config.ollamaChatModel,
+  embeddingModel: config.ollamaEmbeddingModel,
+  timeoutMs: config.modelRequestTimeoutMs,
+};
+const embeddings =
+  config.embeddingProvider === 'ollama'
+    ? new OllamaEmbeddingProvider(ollamaOptions)
+    : new MockEmbeddingProvider();
+const chatProvider =
+  config.chatProvider === 'ollama'
+    ? new OllamaChatProvider(ollamaOptions)
+    : new MockChatProvider();
 
 const now = () => new Date().toISOString();
 
@@ -93,7 +107,9 @@ export const indexUploadedDocument = async (input: {
       buffer: input.buffer,
     });
     const chunks = chunkDocument(parsed);
-    const vectors = await embeddings.embedTexts(chunks.map((chunk) => chunk.text));
+    const vectors = await embeddings.embedTexts(
+      chunks.map((chunk) => chunk.text),
+    );
     await vectorStore.upsert(chunks, vectors);
 
     const indexedDocument: DocumentRecord = {
@@ -138,7 +154,9 @@ export const indexDemoDocument = async (documentId: string) => {
     title: existing.fileName,
     pages: demoPages,
   });
-  const vectors = await embeddings.embedTexts(chunks.map((chunk) => chunk.text));
+  const vectors = await embeddings.embedTexts(
+    chunks.map((chunk) => chunk.text),
+  );
   await vectorStore.upsert(chunks, vectors);
 
   existing.status = 'ready';

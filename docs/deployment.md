@@ -11,6 +11,25 @@ Run the full stack with Docker Compose:
 - Worker service
 - Web app
 
+The backend RAG path uses Ollama by default:
+
+- `CHAT_PROVIDER=ollama`
+- `EMBEDDING_PROVIDER=ollama`
+- `OLLAMA_CHAT_MODEL=gemma3:4b`
+- `OLLAMA_EMBEDDING_MODEL=nomic-embed-text`
+
+Before sending chat requests, pull the models into the same Ollama runtime that
+the API uses:
+
+```bash
+ollama pull gemma3:4b
+ollama pull nomic-embed-text
+```
+
+`GET /health` reports the active backend provider, the execution target, and
+whether the required Ollama models are reachable. For local demos without model
+downloads, set `CHAT_PROVIDER=mock` and `EMBEDDING_PROVIDER=mock`.
+
 ## Cloud
 
 The same containers map directly to:
@@ -23,4 +42,3 @@ The same containers map directly to:
 ## Recruiter explanation
 
 This architecture is portable because compute stays stateless while only documents and vectors are persisted.
-
