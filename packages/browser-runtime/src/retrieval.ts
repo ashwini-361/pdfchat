@@ -148,7 +148,11 @@ export const searchTerms = (
         score: uniqueTerms.size ? Math.min(1, score / uniqueTerms.size) : 0,
       };
     })
-    .filter((chunk) => chunk.score > 0)
+    .filter(
+      (chunk) =>
+        chunk.score >
+        Math.max(0, Math.min(100, options.similarityThreshold ?? 0)) / 100,
+    )
     .sort((left, right) => right.score - left.score)
     .slice(0, options.maxResults);
 };
