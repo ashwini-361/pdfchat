@@ -16,6 +16,7 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       include: [
         'apps/api/src/**/*.ts',
+        'packages/browser-runtime/src/**/*.ts',
         'packages/rag-core/src/**/*.ts',
         'packages/shared/src/**/*.ts',
       ],

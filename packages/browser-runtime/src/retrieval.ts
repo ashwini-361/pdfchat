@@ -34,6 +34,7 @@ const stopWords = new Set([
   'that',
   'their',
   'there',
+  'the',
   'these',
   'this',
   'through',
