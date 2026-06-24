@@ -8,11 +8,13 @@
   "scripts": {
     "dev": "tsc --noEmit --watch",
     "build": "tsc --noEmit",
+    "test": "vitest run --root ../.. packages/browser-runtime",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@doc-chat/shared": "workspace:*"
+    "@doc-chat/shared": "workspace:*",
+    "@huggingface/transformers": "^4.2.0",
+    "@mlc-ai/web-llm": "^0.2.84"
   }
 }
-

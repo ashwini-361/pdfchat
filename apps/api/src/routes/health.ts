@@ -24,16 +24,20 @@ export const registerHealthRoutes = async (app: FastifyInstance) => {
       appEnv: config.appEnv,
       model: config.ollamaChatModel,
       runtime: {
+        scope: 'backend-only',
         api: 'fastify-node',
         modelExecution:
           config.chatProvider === 'ollama'
             ? 'backend-api-to-ollama'
             : 'backend-api-mock',
-        webGpu: false,
-        webRuntime: false,
         chatProvider: config.chatProvider,
         embeddingProvider: config.embeddingProvider,
         ollama,
+        browserRuntime: {
+          primaryMode: 'browser-webgpu-webllm',
+          measuredByHealth: false,
+          note: 'Browser WebGPU/WebLLM support is detected inside the web app settings panel.',
+        },
       },
     };
   });

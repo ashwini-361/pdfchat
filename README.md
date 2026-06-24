@@ -46,12 +46,13 @@ chat-with-any-document/
 ```mermaid
 flowchart LR
     U["User"] --> W["Web App"]
+    W --> B["Browser WebGPU/WebLLM"]
     W --> A["API Service"]
     A --> S["S3-compatible Storage"]
     A --> V["PostgreSQL + pgvector"]
-    A --> M["Model Gateway"]
+    A --> M["Optional Backend Model Gateway"]
     S --> K["Worker"]
-    K --> P["PDF Parse"]
+    K --> P["Parse"]
     P --> C["Chunking"]
     C --> E["Embeddings"]
     E --> V
@@ -65,10 +66,10 @@ The original reference project is strong at browser-native AI. This repo keeps t
 - browser-side PDF parsing mode
 - local embedding mode
 - in-memory search mode
-- optional WebLLM local inference path
+- primary WebLLM local inference path
 - Gemma, Llama, and Phi browser-model strategy notes
 
-The main upgrade is that those capabilities now sit beside a production-friendly service architecture instead of replacing it.
+The main upgrade is that those capabilities now sit beside a production-friendly service architecture. Browser offline chat is the default experience; API and Ollama paths are optional for deployments and advanced providers.
 
 ## Student-first upgrades
 
@@ -99,9 +100,16 @@ This repo now adds a practical study layer on top of document chat:
 - `worker`
 - `postgres` with `pgvector`
 - `minio` for S3-compatible object storage
-- `ollama` for local open-source models
+- optional `ollama` for backend open-source models
 
-Pull the default local models before using the real backend RAG path:
+The web app can run the main PDF chat flow without Ollama:
+
+- PDF parsing happens in the browser with PDF.js
+- embeddings use Transformers.js on WebGPU when available
+- chat generation uses WebLLM on WebGPU when available
+- fallback order is WebLLM -> Chrome Prompt API -> local extractive answer
+
+Pull the default local models only when using the optional backend RAG path:
 
 ```bash
 ollama pull gemma3:4b
@@ -112,17 +120,17 @@ ollama pull nomic-embed-text
 
 This repo is scaffolded as a serious starter rather than a finished product:
 
-- the web app presents the product shell and capability story
+- the web app defaults to browser-offline PDF chat with WebGPU/WebLLM settings
 - the API exposes health, document creation, demo indexing, and grounded chat endpoints
 - the API also exposes benchmark, deployment, student-feature, and study-pack endpoints
 - the API accepts real multipart uploads at `POST /v1/documents/upload`
 - supported upload formats are discoverable at `GET /v1/documents/supported-formats`
-- `/health` reports whether model execution is using backend Ollama or the mock provider
-- server-side chat and embeddings use Ollama by default through `CHAT_PROVIDER=ollama` and `EMBEDDING_PROVIDER=ollama`
+- `/health` reports backend-only model provider status; it does not measure browser WebGPU/WebLLM
+- server-side chat and embeddings can use optional Ollama through `CHAT_PROVIDER=ollama` and `EMBEDDING_PROVIDER=ollama`
 - the worker demonstrates ingestion reporting
 - shared packages already model contracts, chunking, prompts, vector search abstractions, and browser-runtime capabilities
 
-The API still uses an in-memory vector store for starter simplicity, but the model provider is now swappable. Use `CHAT_PROVIDER=mock` and `EMBEDDING_PROVIDER=mock` for offline demos, or keep the default Ollama providers for real local model execution.
+The API still uses an in-memory vector store for starter simplicity, but the model provider is swappable. Browser-local chat works independently of backend model health. Use `CHAT_PROVIDER=mock` and `EMBEDDING_PROVIDER=mock` for backend demos without model downloads, or configure Ollama for optional backend model execution.
 
 ## Suggested next implementation steps
 

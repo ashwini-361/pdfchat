@@ -44,12 +44,15 @@ describe('api app', () => {
       status: 'ok',
       service: 'api',
       runtime: {
+        scope: 'backend-only',
         modelExecution: 'backend-api-mock',
-        webGpu: false,
-        webRuntime: false,
         chatProvider: 'mock',
         embeddingProvider: 'mock',
         ollama: null,
+        browserRuntime: {
+          primaryMode: 'browser-webgpu-webllm',
+          measuredByHealth: false,
+        },
       },
     });
 
@@ -91,11 +94,14 @@ describe('api app', () => {
     expect(okResponse.json()).toMatchObject({
       status: 'ok',
       runtime: {
+        scope: 'backend-only',
         modelExecution: 'backend-api-to-ollama',
-        webGpu: false,
-        webRuntime: false,
         chatProvider: 'ollama',
         embeddingProvider: 'ollama',
+        browserRuntime: {
+          primaryMode: 'browser-webgpu-webllm',
+          measuredByHealth: false,
+        },
         ollama: {
           status: 'ready',
           baseUrl: 'http://ollama.test',
