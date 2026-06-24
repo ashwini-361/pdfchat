@@ -21,7 +21,7 @@ export const referenceInspiredCapabilities = (
     id: 'local-embeddings',
     label: 'Local embeddings',
     enabled: flags.browserRagEnabled,
-    note: 'Optional browser-side embeddings inspired by Transformers.js usage.',
+    note: 'Primary browser-side embeddings powered by Transformers.js when WebGPU is available.',
   },
   {
     id: 'in-memory-search',
@@ -33,7 +33,7 @@ export const referenceInspiredCapabilities = (
     id: 'web-llm-chat',
     label: 'WebLLM local chat',
     enabled: flags.webLlmEnabled,
-    note: 'Optional browser-side generation path using local models like Gemma.',
+    note: 'Primary browser-side generation path using local models like Gemma.',
   },
 ];
 
