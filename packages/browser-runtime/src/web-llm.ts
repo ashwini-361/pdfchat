@@ -50,15 +50,6 @@ export class BrowserWebLlmEngine {
       initProgressCallback: (progress: BrowserEngineProgress) => {
         onProgress(progress);
       },
-      appConfig: {
-        model_list: [
-          {
-            model: this.model.modelUrl,
-            model_id: this.model.id,
-            model_lib: this.model.modelLibUrl,
-          },
-        ],
-      },
     });
   }
 

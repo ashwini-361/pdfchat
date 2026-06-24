@@ -191,6 +191,21 @@ const defaultCapabilities: BrowserRuntimeCapabilities = {
   reason: 'Checking browser runtime...',
 };
 
+const summarizeModelError = (error: unknown, fallback: string) => {
+  const message = error instanceof Error ? error.message : '';
+  if (/OrtRun|mapAsync|GPUBuffer|WebGPU|external Instance/i.test(message)) {
+    return `WebGPU model execution failed. ${fallback}`;
+  }
+  if (/WebAssembly|TVMWasmPackedCFunc|model_lib/i.test(message)) {
+    return `WebLLM model library failed to load. ${fallback}`;
+  }
+  if (/fetch|network|download/i.test(message)) {
+    return `Model download failed. ${fallback}`;
+  }
+
+  return message ? `${fallback} ${message}` : fallback;
+};
+
 const bestSentences = (text: string, query = '', limit = 5) => {
   const queryTerms = new Set(tokenizeBrowserText(query));
   return splitBrowserSentences(text)
@@ -395,16 +410,18 @@ export const LocalPdfChat = () => {
         nextChunks.map((chunk) => chunk.text),
       );
       setVectorEntries(createVectorEntries(nextChunks, vectors));
-      setRetrievalEngine(`WebGPU embeddings: ${embeddingModel.label}`);
-      setRuntimeStatus('Browser embedding index ready.');
+      setRetrievalEngine(
+        `${embeddingEngine.runtimeLabel} embeddings: ${embeddingModel.label}`,
+      );
+      setRuntimeStatus(
+        `Browser embedding index ready with ${embeddingEngine.runtimeLabel}.`,
+      );
       return true;
     } catch (error) {
       setVectorEntries([]);
       setRetrievalEngine('Local term retrieval');
       setRuntimeStatus(
-        error instanceof Error
-          ? `Embedding fallback: ${error.message}`
-          : 'Embedding fallback: WebGPU embedding failed.',
+        summarizeModelError(error, 'Using local term retrieval for this PDF.'),
       );
       return false;
     }
@@ -481,15 +498,13 @@ export const LocalPdfChat = () => {
         });
         if (vectorResults.length > 0) {
           setRetrievalEngine(
-            `WebGPU embeddings: ${activeEmbeddingModel.label}`,
+            `${getEmbeddingEngine().runtimeLabel} embeddings: ${activeEmbeddingModel.label}`,
           );
           return vectorResults;
         }
       } catch (error) {
         setRuntimeStatus(
-          error instanceof Error
-            ? `Query embedding fallback: ${error.message}`
-            : 'Query embedding fallback: local term retrieval.',
+          summarizeModelError(error, 'Using local term retrieval.'),
         );
       }
     }
@@ -552,9 +567,7 @@ export const LocalPdfChat = () => {
       return answer.trim() || null;
     } catch (error) {
       setRuntimeStatus(
-        error instanceof Error
-          ? `WebLLM fallback: ${error.message}`
-          : 'WebLLM fallback: browser model failed.',
+        summarizeModelError(error, 'Trying the next browser fallback.'),
       );
       return null;
     }

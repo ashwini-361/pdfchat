@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createBrowserDocumentChunks,
   createVectorEntries,
+  expandBrowserQueryTerms,
   expandRetrievedChunks,
   extractiveBrowserAnswer,
   searchTerms,
@@ -18,6 +19,15 @@ describe('browser retrieval helpers', () => {
       'browser',
       'model',
       'run',
+    ]);
+  });
+
+  it('keeps useful short acronyms and expands study abbreviations', () => {
+    expect(tokenizeBrowserText('what is ml')).toEqual(['ml']);
+    expect([...expandBrowserQueryTerms(['ml'])]).toEqual([
+      'ml',
+      'machine',
+      'learning',
     ]);
   });
 
@@ -65,6 +75,25 @@ describe('browser retrieval helpers', () => {
         similarityThreshold: 100,
       }),
     ).toHaveLength(0);
+  });
+
+  it('matches expanded acronyms against full document terms', () => {
+    const chunks = createBrowserDocumentChunks([
+      {
+        page: 1,
+        text: 'Machine Learning is a field where computer systems learn patterns from data.',
+      },
+    ]);
+
+    const [match] = searchTerms('what is ml', chunks, {
+      maxResults: 2,
+      similarityThreshold: 60,
+    });
+
+    expect(match).toMatchObject({
+      page: 1,
+      score: 1,
+    });
   });
 
   it('searches vector entries with cosine similarity', () => {

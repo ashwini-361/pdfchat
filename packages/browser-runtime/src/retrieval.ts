@@ -24,13 +24,27 @@ const stopWords = new Set([
   'about',
   'after',
   'also',
+  'am',
+  'an',
   'and',
   'are',
+  'as',
+  'at',
+  'be',
   'because',
   'between',
+  'by',
+  'do',
   'from',
   'have',
+  'hi',
+  'in',
   'into',
+  'is',
+  'it',
+  'of',
+  'on',
+  'or',
   'that',
   'their',
   'there',
@@ -48,12 +62,34 @@ const stopWords = new Set([
   'would',
 ]);
 
+const queryExpansions = new Map<string, string[]>([
+  ['ai', ['artificial', 'intelligence']],
+  ['dbms', ['database', 'management', 'system']],
+  ['knn', ['nearest', 'neighbor']],
+  ['ml', ['machine', 'learning']],
+  ['nlp', ['natural', 'language', 'processing']],
+  ['pca', ['principal', 'component', 'analysis']],
+  ['svm', ['support', 'vector', 'machine']],
+]);
+
 export const tokenizeBrowserText = (value: string) =>
   value
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter((term) => term.length > 2 && !stopWords.has(term));
+    .filter((term) => term.length > 1 && !stopWords.has(term));
+
+export const expandBrowserQueryTerms = (terms: Iterable<string>) => {
+  const expanded = new Set<string>();
+  for (const term of terms) {
+    expanded.add(term);
+    for (const related of queryExpansions.get(term) ?? []) {
+      expanded.add(related);
+    }
+  }
+
+  return expanded;
+};
 
 export const splitBrowserSentences = (text: string) =>
   text
@@ -132,7 +168,7 @@ export const searchTerms = (
   chunks: BrowserDocumentChunk[],
   options: { maxResults: number; similarityThreshold?: number },
 ): BrowserRetrievedChunk[] => {
-  const uniqueTerms = new Set(tokenizeBrowserText(question));
+  const uniqueTerms = expandBrowserQueryTerms(tokenizeBrowserText(question));
 
   return chunks
     .map((chunk) => {

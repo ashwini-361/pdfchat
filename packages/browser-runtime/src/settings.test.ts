@@ -11,7 +11,7 @@ import {
 describe('browser runtime settings', () => {
   it('uses browser offline defaults', () => {
     expect(defaultBrowserRuntimeSettings).toMatchObject({
-      languageModelId: 'gemma2-2b-it-q4f16-mlc',
+      languageModelId: 'gemma3-1b-it-q4f16_1-MLC',
       embeddingModelId: 'Xenova/all-MiniLM-L6-v2',
       surroundingResults: 3,
       maxResults: 5,
@@ -29,7 +29,7 @@ describe('browser runtime settings', () => {
   it('normalizes model selections and clamps numeric settings', () => {
     expect(
       normalizeBrowserRuntimeSettings({
-        languageModelId: 'llama-3-2-1b-instruct-q4f16-mlc',
+        languageModelId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
         embeddingModelId: 'mixedbread-ai/mxbai-embed-large-v1',
         promptTemplate: 'Answer from {results}',
         surroundingResults: 20,
@@ -37,7 +37,7 @@ describe('browser runtime settings', () => {
         similarityThreshold: 101,
       }),
     ).toMatchObject({
-      languageModelId: 'llama-3-2-1b-instruct-q4f16-mlc',
+      languageModelId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
       embeddingModelId: 'mixedbread-ai/mxbai-embed-large-v1',
       promptTemplate: 'Answer from {results}',
       surroundingResults: 8,
